@@ -1,0 +1,11 @@
+split
+screen
+title "Editor"
+setenv FILE $FILE
+stuff "vim ~/.code-runner/go/src/$FILE^M"
+focus
+screen
+title "Output"
+stuff "docker run -t -v /Users/`whoami`/.code-runner/go:/go golang watch go run src/$FILE^M"
+focus
+#chacl * -w 1
