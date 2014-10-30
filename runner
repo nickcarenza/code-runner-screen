@@ -1,0 +1,59 @@
+show_help() {
+cat << EOF
+Usage: ${0##*/} [-hv] [-f OUTFILE] [FILE]...
+Run code and edit it in the same window...
+    
+    -h          display this help and exit
+    -l LANGUAGE Language to use
+    -f INFILE   the file to run and edit
+EOF
+} 
+
+# A POSIX variable
+OPTIND=1         # Reset in case getopts has been used previously in the shell.
+
+# Initialize our own variables:
+input_file=""
+language="golang"
+
+while getopts "h?l:f:" opt; do
+    case "$opt" in
+    h|\?)
+        show_help
+        exit 0
+        ;;
+    l)  language=$OPTARG
+        ;;
+    f)  input_file=$OPTARG
+        ;;
+    esac
+done
+
+shift $((OPTIND-1))
+
+langs_node="node /app/$input_file" 
+langs_golang="go run /app/$input_file"
+
+lang=langs_$language
+
+
+
+[ "$1" = "--" ] && shift
+echo "language=$language, input_file='$input_file', Leftovers: $@"
+session="$language"
+tmux new -d -s "$session" "vim $input_file"
+tmux split -t "$session" -h "docker run -t -v $(dirname $(grealpath ${input_file})):/app:ro ${language} watch $(eval echo \$$lang)"
+tmux select-pane -t "$session" -L
+tmux attach -t "$session"
+tmux bind-key -n 'C-x' kill-window -t $session
+
+# split
+# screen
+# title "Editor"
+# setenv FILE $FILE
+# # stuff "vim ~/.code-runner/go/src/$language^M"
+# focus
+# screen
+# title "Output"
+# stuff "docker run -t -v /Users/`whoami`/.code-runner/go:/go golang watch go run src/$language^M"
+# focus
