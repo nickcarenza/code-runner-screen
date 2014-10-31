@@ -10,12 +10,12 @@ Installation:
 
 Usage:
 =====
-runner [-hv] [-f OUTFILE] [FILE]...
-Run code and edit it in the same window...
+    runner [-hv] [-f OUTFILE] [FILE]...
+    Run code and edit it in the same window...
     
-    -h          display this help and exit
-    -l LANGUAGE Language to use
-    -f INFILE   the file to run and edit
+        -h          display this help and exit
+        -l LANGUAGE Language to use
+        -f INFILE   the file to run and edit
 
 Languages Supported:
 ====================
