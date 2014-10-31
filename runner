@@ -1,11 +1,10 @@
 show_help() {
 cat << EOF
-Usage: ${0##*/} [-hv] [-f OUTFILE] [FILE]...
+Usage: ${0##*/} [-hl] [FILE]
 Run code and edit it in the same window...
     
     -h          display this help and exit
     -l LANGUAGE Language to use
-    -f INFILE   the file to run and edit
 EOF
 } 
 
