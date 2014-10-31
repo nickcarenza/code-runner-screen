@@ -31,29 +31,27 @@ done
 
 shift $((OPTIND-1))
 
-langs_node="node /app/$input_file" 
-langs_golang="go run /app/$input_file"
+langs_node="node /app/$(basename $input_file)" 
+langs_golang="go run /app/$(basename $input_file)"
 
 lang=langs_$language
-
-
 
 [ "$1" = "--" ] && shift
 echo "language=$language, input_file='$input_file', Leftovers: $@"
 session="$language"
 tmux new -d -s "$session" "vim $input_file"
-tmux split -t "$session" -h "docker run -t -v $(dirname $(grealpath ${input_file})):/app:ro ${language} watch $(eval echo \$$lang)"
+
+cleanup(){
+    docker kill $session > /dev/null 2>&1
+    docker rm $session > /dev/null 2>&1
+}
+
+trap cleanup EXIT
+tmux bind-key -n 'C-x' kill-window -t $session
+# tmux set-option -t "$session" mouse-resize-pane on
+# tmux set-option -t "$session" mouse-select-pane on
+tmux split -t "$session" -h "docker run --name '$session' -t -v $(dirname $(grealpath ${input_file})):/app:ro ${language} watch $(eval echo \$$lang)"
 tmux select-pane -t "$session" -L
 tmux attach -t "$session"
-tmux bind-key -n 'C-x' kill-window -t $session
 
-# split
-# screen
-# title "Editor"
-# setenv FILE $FILE
-# # stuff "vim ~/.code-runner/go/src/$language^M"
-# focus
-# screen
-# title "Output"
-# stuff "docker run -t -v /Users/`whoami`/.code-runner/go:/go golang watch go run src/$language^M"
-# focus
+# end of file
