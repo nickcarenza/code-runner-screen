@@ -16,7 +16,7 @@ OPTIND=1         # Reset in case getopts has been used previously in the shell.
 input_file=""
 language="golang"
 
-while getopts "h?l:f:" opt; do
+while getopts "h?l:" opt; do
     case "$opt" in
     h|\?)
         show_help
@@ -24,12 +24,12 @@ while getopts "h?l:f:" opt; do
         ;;
     l)  language=$OPTARG
         ;;
-    f)  input_file=$OPTARG
-        ;;
     esac
 done
 
 shift $((OPTIND-1))
+
+input_file=$@
 
 langs_node="node /app/$(basename $input_file)" 
 langs_golang="go run /app/$(basename $input_file)"
