@@ -20,6 +20,7 @@ while getopts "h?l:f:" opt; do
     case "$opt" in
     h|\?)
         show_help
+        exit
         ;;
     l)  language=$OPTARG
         ;;
