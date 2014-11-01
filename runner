@@ -1,5 +1,12 @@
 #!/bin/bash
 
+DIRECTORY="$HOME/.coderunner"
+
+if [ ! -d "$DIRECTORY" ]; then
+  # echo "creating $DIRECTORY"
+  mkdir -p "$DIRECTORY"
+fi
+
 show_help() {
 cat << EOF
 Usage: ${0##*/} [-h, -l -c|--command, --container] [FILE]
@@ -36,8 +43,14 @@ while getopts "h?l:c:-command:i:" opt; do
 done
 
 shift $((OPTIND-1))
-
 input_file=$@
+temp=false
+if [ -z "$input_file" ]; then
+  temp=true
+  input_file="${DIRECTORY}/$(basename $0).$$.tmp"
+  mktemp "$input_file"
+fi
+
 file_path="/app/$(basename $input_file)"
 langs_node="node ${file_path}" 
 langs_golang="go run ${file_path}"
@@ -47,22 +60,26 @@ langs_ruby="ruby ${file_path}"
 lang=langs_$language
 
 if [ -z "$container" ]; then 
-    container=$language
+  container=$language
 fi
 
 if [ -n "$command" ]; then
-    lang="$command"
+  lang="$command"
 fi
 
 [ "$1" = "--" ] && shift
-echo "language=$language, container='$container' command='$command' input_file='$input_file', Leftovers: $@"
+# echo "language=$language, container='$container' command='$command' input_file='$input_file', Leftovers: $@"
 session="$language"
 
 tmux new -d -s "$session" "vim $input_file"
 
 cleanup(){
-    docker kill $session > /dev/null 2>&1
-    docker rm $session > /dev/null 2>&1
+  docker kill $session > /dev/null 2>&1
+  docker rm $session > /dev/null 2>&1
+  echo $@
+  if [ $temp == true ]; then
+    rm "$input_file" 
+  fi
 }
 
 trap cleanup EXIT
