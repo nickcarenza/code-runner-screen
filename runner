@@ -1,10 +1,14 @@
+#!/bin/bash
+
 show_help() {
 cat << EOF
-Usage: ${0##*/} [-hl] [FILE]
+Usage: ${0##*/} [-h, -l -c|--command, --container] [FILE]
 Run code and edit it in the same window...
     
-    -h          display this help and exit
-    -l LANGUAGE Language to use
+    -h                  display this help and exit
+    -l                  Language to use
+    -c, --command       Command to run in the contianer
+    -i                  Docker Container to use
 EOF
 } 
 
@@ -14,8 +18,9 @@ OPTIND=1         # Reset in case getopts has been used previously in the shell.
 # Initialize our own variables:
 input_file=""
 language="golang"
+container=""
 
-while getopts "h?l:" opt; do
+while getopts "h?l:c:-command:i:" opt; do
     case "$opt" in
     h|\?)
         show_help
@@ -23,21 +28,33 @@ while getopts "h?l:" opt; do
         ;;
     l)  language=$OPTARG
         ;;
+    i) container=$OPTARG
+        ;;
+    c|-command) command=$OPTARG        
+        ;;
     esac
 done
 
 shift $((OPTIND-1))
 
 input_file=$@
-
 langs_node="node /app/$(basename $input_file)" 
 langs_golang="go run /app/$(basename $input_file)"
 
 lang=langs_$language
 
+if [ -z "$container" ]; then 
+    container=$language
+fi
+
+if [ -n "$command" ]; then
+    lang="$command"
+fi
+
 [ "$1" = "--" ] && shift
-echo "language=$language, input_file='$input_file', Leftovers: $@"
+echo "language=$language, container='$container' command='$command' input_file='$input_file', Leftovers: $@"
 session="$language"
+
 tmux new -d -s "$session" "vim $input_file"
 
 cleanup(){
@@ -49,8 +66,7 @@ trap cleanup EXIT
 tmux bind-key -n 'C-x' kill-window -t $session
 # tmux set-option -t "$session" mouse-resize-pane on
 # tmux set-option -t "$session" mouse-select-pane on
-tmux split -t "$session" -h "docker run --name '$session' -t -v $(dirname $(grealpath ${input_file})):/app:ro ${language} watch $(eval echo \$$lang)"
+tmux split -t "$session" -h "docker run --name '$session' -t -v $(dirname $(grealpath ${input_file})):/app:ro ${container} watch ${lang}"
 tmux select-pane -t "$session" -L
 tmux attach -t "$session"
-
 # end of file
