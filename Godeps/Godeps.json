@@ -1,0 +1,26 @@
+{
+	"ImportPath": "github.com/ChrisMcKenzie/code-runner",
+	"GoVersion": "go1.3.1",
+	"Packages": [
+		"./..."
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/ChrisMckenzie/code-runner/pkg/tmux",
+			"Rev": "894b12c01360582b2c2f74ee8ef9eb0e8f98611f"
+		},
+		{
+			"ImportPath": "github.com/codegangsta/cli",
+			"Comment": "1.2.0-26-gf7ebb76",
+			"Rev": "f7ebb761e83e21225d1d8954fde853bf8edd46c4"
+		},
+		{
+			"ImportPath": "github.com/op/go-logging",
+			"Rev": "25891250fe98858f83506bc4411f82722d1be344"
+		},
+		{
+			"ImportPath": "gopkg.in/yaml.v2",
+			"Rev": "eca94c41d994ae2215d455ce578ae6e2dc6ee516"
+		}
+	]
+}

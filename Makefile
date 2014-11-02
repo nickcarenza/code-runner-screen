@@ -13,3 +13,6 @@ deps-save:
 
 build: 
 	go build -o bin/runner -ldflags "-X main.version $(VERSION)dev-$(SHA)" runner.go
+
+install: build
+	install bin/runner /usr/local/bin
