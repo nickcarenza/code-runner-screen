@@ -10,13 +10,22 @@ Installation:
 
 Usage:
 =====
-    runner [-h, -l -c|--command, --container] [FILE]
-    Run code and edit it in the same window...
-        
-        -h                  display this help and exit
-        -l                  Language to use
-        -c, --command       Command to run in the contianer
-        -i                  Docker Container to use
+    NAME:
+       Runner - Run some code...
+
+    USAGE:
+       Runner [global options] command [command options] [arguments...]
+
+    VERSION:
+       0.0.1a
+
+    COMMANDS:
+       help, h  Shows a list of commands or help for one command
+       
+    GLOBAL OPTIONS:
+       --lang, -l 'golang'  language for runner
+       --help, -h   show help
+       --version, -v  print the version
 
 Languages Supported:
 ====================

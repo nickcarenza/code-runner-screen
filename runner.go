@@ -5,17 +5,20 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"os/user"
+	"path"
+	"path/filepath"
 	"text/template"
 
+	"github.com/ChrisMckenzie/code-runner/pkg/tmux"
 	"github.com/codegangsta/cli"
 	"github.com/op/go-logging"
 	"gopkg.in/yaml.v2"
 )
 
 type Language struct {
-	Command string `yaml:"command"`
+	Command   string `yaml:"command"`
+	Container string `yaml:"container"`
 }
 
 type Config struct {
@@ -33,14 +36,16 @@ var (
 	log           = logging.MustGetLogger("runner")
 	usr, _        = user.Current()
 	home          = usr.HomeDir
-	path          = fmt.Sprintf("%s/%s", home, pathName)
+	Path          = fmt.Sprintf("%s/%s", home, pathName)
 	defaultConfig = Config{
 		Languages: map[string]Language{
 			"golang": Language{
-				Command: "go run {{file}}",
+				Command:   "go run {{.file}}",
+				Container: "golang",
 			},
 			"node": Language{
-				Command: "node {{file}}",
+				Command:   "node {{.file}}",
+				Container: "node",
 			},
 		},
 	}
@@ -84,29 +89,27 @@ func startApp(config *Config, c *cli.Context) {
 	}
 	t := template.Must(template.New("command").Parse(config.Languages[language].Command))
 	data := map[string]interface{}{
-		"file": c.Args().First(),
+		"file": path.Base(c.Args().First()),
 	}
 	t.Execute(command, data)
 	log.Info("running %s", command.String())
-	tmux := exec.Command("tmux", "new", "-d", fmt.Sprintf("-s %s", language), fmt.Sprintf("vim %s", c.Args().First()))
-	// cmd := exec.Command("tmux", "n")
-	key := exec.Command("tmux", "bind-key", "-n", "'C-x'", "kill-window", fmt.Sprintf("-t %s", language))
-  docker := exec.Command("tmux", "split", fmt.Sprintf("-t %s", language), "-h", fmt.Sprintf("docker run --name '%s' -t -v %s:/app:ro  watch $(eval echo \$$lang)")
-	attach := exec.Command("tmux", "attach", fmt.Sprintf("-t %s", language))
-	// log.Info("%#v", cmd)
-	attach.Stdout = os.Stdout
-	attach.Stdin = os.Stdin
 
-	tmux.Run()
-	key.Run()
-	attach.Run()
+	container := config.Languages[language].Container
+	absolutePath, _ := filepath.Abs(c.Args().First())
+	// log.Info("docker run -t %s -v %s:/app:ro watch %s", container, path.Dir(absolutePath), script)
+
+	tmux, _ := tmux.New(language, fmt.Sprintf("vim %s", c.Args().First()))
+	tmux.BindKey("C-x", true, "kill-window", fmt.Sprintf("-t %s", tmux.Session))
+	tmux.Split(false, fmt.Sprintf("docker run -t -v %s:/app:ro -w /app %s watch %s", path.Dir(absolutePath), container, command))
+	tmux.Run("select-pane", fmt.Sprintf("-t %s", tmux.Session), "-L")
+	tmux.Attach()
 }
 
 func Setupdir() {
-	log.Info("Checking: %s", path)
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		log.Info("Creating: %s", path)
-		err := os.MkdirAll(path, 0777)
+	log.Info("Checking: %s", Path)
+	if _, err := os.Stat(Path); os.IsNotExist(err) {
+		log.Info("Creating: %s", Path)
+		err := os.MkdirAll(Path, 0777)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -114,7 +117,7 @@ func Setupdir() {
 }
 
 func GetConfig() Config {
-	var file = fmt.Sprintf("%s/%s", path, configName)
+	var file = fmt.Sprintf("%s/%s", Path, configName)
 	if _, err := os.Stat(file); os.IsNotExist(err) {
 		// Set Default Config
 		return defaultConfig
