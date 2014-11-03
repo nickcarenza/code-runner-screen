@@ -1,14 +1,15 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
+	"os/signal"
 	"os/user"
 	"path"
 	"path/filepath"
-	"text/template"
+	"syscall"
 
 	"github.com/ChrisMckenzie/code-runner/pkg/tmux"
 	"github.com/codegangsta/cli"
@@ -40,11 +41,11 @@ var (
 	defaultConfig = Config{
 		Languages: map[string]Language{
 			"golang": Language{
-				Command:   "go run {{.file}}",
+				Command:   "go run %s",
 				Container: "golang",
 			},
 			"node": Language{
-				Command:   "node {{.file}}",
+				Command:   "node %s",
 				Container: "node",
 			},
 		},
@@ -73,8 +74,6 @@ func main() {
 	app.Action = func(c *cli.Context) {
 		Setupdir()
 		config := GetConfig()
-		// log.Info("%#v", config)
-
 		startApp(&config, c)
 	}
 
@@ -82,27 +81,34 @@ func main() {
 }
 
 func startApp(config *Config, c *cli.Context) {
-	var language = c.String("lang")
-	command := new(bytes.Buffer)
+	language := c.String("lang")
 	if language == "" {
 		language = config.DefaultLang
 	}
-	t := template.Must(template.New("command").Parse(config.Languages[language].Command))
-	data := map[string]interface{}{
-		"file": path.Base(c.Args().First()),
-	}
-	t.Execute(command, data)
-	log.Info("running %s", command.String())
+
+	command := fmt.Sprintf(config.Languages[language].Command, path.Base(c.Args().First()))
+	log.Debug("Running: %s", command)
 
 	container := config.Languages[language].Container
 	absolutePath, _ := filepath.Abs(c.Args().First())
-	// log.Info("docker run -t %s -v %s:/app:ro watch %s", container, path.Dir(absolutePath), script)
 
+	// Create a detached tmux session
 	tmux, _ := tmux.New(language, fmt.Sprintf("vim %s", c.Args().First()))
+	// Bind CTRL-X to exit.
 	tmux.BindKey("C-x", true, "kill-window", fmt.Sprintf("-t %s", tmux.Session))
-	tmux.Split(false, fmt.Sprintf("docker run -t -v %s:/app:ro -w /app %s watch %s", path.Dir(absolutePath), container, command))
+	// Split the window vertical
+	tmux.Split(false, fmt.Sprintf("docker run --name %s -t -v %s:/app:ro -w /app %s watch %s", container, path.Dir(absolutePath), container, command))
+	// Set Active pane to left pane
 	tmux.Run("select-pane", fmt.Sprintf("-t %s", tmux.Session), "-L")
-	tmux.Attach()
+	// Attach the tmux session.
+	err := tmux.Attach()
+	// log.Debug("%#v", err)
+	if err == nil {
+		kill := exec.Command("docker", "kill", container)
+		rm := exec.Command("docker", "rm", container)
+		kill.Run()
+		rm.Run()
+	}
 }
 
 func Setupdir() {
@@ -135,5 +141,21 @@ func GetConfig() Config {
 func appendMap(dest map[string]Language, src map[string]Language) {
 	for lang, val := range src {
 		dest[lang] = val
+	}
+}
+
+func sigHandler(cs chan bool) {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP,
+		syscall.SIGQUIT, syscall.SIGKILL, syscall.SIGCHLD)
+
+	signal := <-c
+	// logEvent(lognotice, sys, "Signal received: "+signal.String())
+
+	switch signal {
+	case syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGKILL, syscall.SIGCHLD:
+		cs <- true
+	case syscall.SIGHUP:
+		cs <- false
 	}
 }
