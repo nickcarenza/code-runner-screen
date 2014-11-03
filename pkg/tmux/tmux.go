@@ -19,14 +19,14 @@ func New(session string, command string) (*Tmux, error) {
 	return t, nil
 }
 
-func (t *Tmux) Run(command string, args ...string) {
+func (t *Tmux) Run(command string, args ...string) error {
 	args = append([]string{command}, args...)
 	cmd := exec.Command("tmux", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stdin = os.Stdin
-	cmd.Stderr = os.Stderr
-	// fmt.Printf("%#v", args)
-	cmd.Run()
+	// cmd.Stderr = os.Stderr
+	cmd.Start()
+	return cmd.Wait()
 }
 
 func (t *Tmux) BindKey(key string, global bool, args ...string) {
@@ -49,6 +49,6 @@ func (t *Tmux) Split(vertical bool, command string) {
 	t.Run("split", t.target, direction, command)
 }
 
-func (t *Tmux) Attach() {
-	t.Run("attach", t.target)
+func (t *Tmux) Attach() error {
+	return t.Run("attach", t.target)
 }
