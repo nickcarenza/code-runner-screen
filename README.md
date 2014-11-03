@@ -27,10 +27,26 @@ Usage:
        --help, -h   show help
        --version, -v  print the version
 
-Languages Supported:
+Languages Natively Supported:
 ====================
 
 - Go: -l golang
 - Node.js: -l node
-- Python: -l python
-- Ruby: -l ruby
+
+Configuration
+==========================
+
+## Languages
+Adding languages to code-runner is easy just create a `~/.coderunner/config.yml`
+and add the following to it:
+
+    languages:
+      ruby:
+        command: "ruby %s"
+        container: ruby
+
+you can also set a default language by adding
+    
+    default: yourlang
+
+
